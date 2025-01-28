@@ -1,20 +1,14 @@
 "use server";
 
 import { z } from "zod";
-import shell from "shelljs";
-import path from "path";
-import fs from "fs";
 import axios from "axios";
-import { exec } from "child_process";
-import util from "util";
 import sharp from "sharp";
 
-const execAsync = util.promisify(exec);
 const githubToken = process.env.GITHUB_TOKEN || ""; // Replace with your GitHub PAT
-const githubUsername = process.env.GITHUB_USER_NAME || ""; // Replace with your GitHub username
-console.log(process.env.GITHUB_TOKEN);
-// Sub-function 1: Create PWA files in a temporary directory
-async function createPWAFiles(tempDir: string, validatedData: any, repoName: string) {
+const githubUsername = process.env.GITHUB_USERNAME || ""; // Replace with your GitHub username
+
+// Sub-function 1: Create PWA files and return their content
+async function createPWAFiles(validatedData: any) {
   // Create index.html with an embedded iframe
   const indexHtmlContent = `
     <!DOCTYPE html>
@@ -43,8 +37,6 @@ async function createPWAFiles(tempDir: string, validatedData: any, repoName: str
     </html>
   `;
 
-  fs.writeFileSync(path.join(tempDir, "index.html"), indexHtmlContent);
-
   // Create manifest.json
   const manifestContent = {
     name: validatedData.name,
@@ -64,36 +56,32 @@ async function createPWAFiles(tempDir: string, validatedData: any, repoName: str
       : [],
   };
 
-  fs.writeFileSync(
-    path.join(tempDir, "manifest.json"),
-    JSON.stringify(manifestContent, null, 2)
-  );
-
   const files = [
-    { name: "manifest.json", content: manifestContent },
-    { name: "index.html", content: indexHtmlContent },
-  ]
-  // If an icon was uploaded, save it to the temp directory
+    { path: "index.html", content: indexHtmlContent },
+    { path: "manifest.json", content: JSON.stringify(manifestContent, null, 2) },
+  ];
+
+  // If an icon was uploaded, resize and convert it to base64
   if (validatedData.icon) {
     const iconBuffer = await validatedData.icon.arrayBuffer();
     const resizedIconBuffer = await sharp(Buffer.from(iconBuffer))
       .resize(192, 192, {
-        fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 0 }
+        fit: "contain",
+        background: { r: 255, g: 255, b: 255, alpha: 0 },
       })
       .png()
       .toBuffer();
-    fs.writeFileSync(
-      path.join(tempDir, validatedData.icon.name),
-      Buffer.from(resizedIconBuffer)
-    );
+    files.push({
+      path: validatedData.icon.name,
+      content: resizedIconBuffer.toString("base64"),
+    });
   }
 
   return files;
 }
 
 // Sub-function 2: Create a new GitHub repository
-async function createGitHubRepo(repoName: string, githubToken: string) {
+async function createGitHubRepo(repoName: string) {
   try {
     const response = await axios.post(
       "https://api.github.com/user/repos",
@@ -125,59 +113,35 @@ async function createGitHubRepo(repoName: string, githubToken: string) {
 }
 
 // Sub-function 3: Push files to the GitHub repository
-async function pushFilesToRepo(
-  tempDir: string,
-  repoCloneUrl: string,
-  githubUsername: string,
-  githubToken: string
-) {
+async function pushFilesToRepo(repoName: string, files: { path: string; content: string }[]) {
   try {
-    console.log(`Changing directory to: ${tempDir}`);
-    process.chdir(tempDir);
+    for (const file of files) {
+      const response = await axios.put(
+        `https://api.github.com/repos/${githubUsername}/${repoName}/contents/${file.path}`,
+        {
+          message: `Add ${file.path}`,
+          content: Buffer.from(file.content).toString("base64"),
+        },
+        {
+          headers: {
+            Authorization: `token ${githubToken}`,
+            Accept: "application/vnd.github.v3+json",
+          },
+        }
+      );
 
-    const commands = [
-      "git init",
-      "git add .",
-      'git commit -m "Initial commit with PWA files"',
-      "git branch -M main",
-      `git remote add origin https://${githubUsername}:${githubToken}@github.com/${githubUsername}/${path.basename(
-        repoCloneUrl,
-        ".git"
-      )}.git`,
-      "git push -u origin main",
-    ];
-
-    for (const command of commands) {
-      await execAsync(command);
+      console.log(`File ${file.path} created:`, response.data);
     }
 
     return true;
   } catch (error) {
-    console.error("Error in Git operations:", error);
+    console.error("Error pushing files to GitHub:", error);
     return false;
   }
 }
 
-// Sub-function 4: Clean up the temporary directory
-function cleanupTempDir(tempDir: string) {
-  shell.rm("-rf", tempDir);
-  console.log(`Cleaned up temporary directory: ${tempDir}`);
-}
-
-const formSchema = z.object({
-  url: z.string().url(),
-  name: z.string().min(1),
-  themeColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
-  icon: z
-    .instanceof(File)
-    .refine((file) => file.type === "image/png", {
-      message: "Only PNG files are allowed",
-    })
-    .optional(),
-});
-
-// Sub-function 5: Enable GitHub Pages for the repository
-async function enableGitHubPages(repoName: string, githubToken: string) {
+// Sub-function 4: Enable GitHub Pages for the repository
+async function enableGitHubPages(repoName: string) {
   try {
     const response = await axios.post(
       `https://api.github.com/repos/${githubUsername}/${repoName}/pages`,
@@ -207,7 +171,18 @@ async function enableGitHubPages(repoName: string, githubToken: string) {
     };
   }
 }
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const formSchema = z.object({
+  url: z.string().url(),
+  name: z.string().min(1),
+  themeColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
+  icon: z
+    .instanceof(File)
+    .refine((file) => file.type === "image/png", {
+      message: "Only PNG files are allowed",
+    })
+    .optional(),
+});
 
 export async function convertToPWA(formData: FormData) {
   // Extract and validate the form data
@@ -217,22 +192,18 @@ export async function convertToPWA(formData: FormData) {
   const icon = formData.get("icon") as File | null;
 
   const validatedData = formSchema.parse({ url, name, themeColor, icon });
-  // Create a temporary directory to store the PWA files
-  const tempDir = path.join(process.cwd(), "temp-pwa");
-  shell.mkdir("-p", tempDir);
 
   // Step 1: Create PWA files
-  const files = createPWAFiles(tempDir, validatedData, name);
+  const files = await createPWAFiles(validatedData);
 
   // Step 2: Create a new GitHub repository
   const repoName = `${validatedData.name
     .toLowerCase()
     .replace(/\s+/g, "-")}-pwa`;
 
-  const repoCreationResult = await createGitHubRepo(repoName, githubToken);
+  const repoCreationResult = await createGitHubRepo(repoName);
 
   if (!repoCreationResult.success) {
-    cleanupTempDir(tempDir);
     return {
       success: false,
       error: repoCreationResult.error,
@@ -240,17 +211,18 @@ export async function convertToPWA(formData: FormData) {
   }
 
   // Step 3: Push files to the new repository
-  pushFilesToRepo(
-    tempDir,
-    repoCreationResult.cloneUrl,
-    githubUsername,
-    githubToken
-  );
+  const pushResult = await pushFilesToRepo(repoName, files);
+
+  if (!pushResult) {
+    return {
+      success: false,
+      error: "Failed to push files to GitHub repository.",
+    };
+  }
 
   // Step 4: Enable GitHub Pages
-  await delay(10000); // Wait 5 seconds
-  let pagesResult = await enableGitHubPages(repoName, githubToken);
-  // Step 5: Clean up the temporary directory
+  const pagesResult = await enableGitHubPages(repoName);
+
   if (!pagesResult.success) {
     return {
       success: false,
@@ -258,12 +230,10 @@ export async function convertToPWA(formData: FormData) {
     };
   }
 
-  // cleanupTempDir(tempDir);
-
   // Return the PWA URL
   return {
     success: true,
-    pwaUrl: pagesResult?.pagesUrl,
-    files: files
+    pwaUrl: pagesResult.pagesUrl,
+    files: files,
   };
 }
