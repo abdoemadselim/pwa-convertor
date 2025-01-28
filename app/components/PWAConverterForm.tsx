@@ -186,7 +186,7 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
                 Forging PWA...
               </>
             ) : (
-              "Forge PWA"
+              "PWAify It"
             )}
           </Button>
         </motion.div>

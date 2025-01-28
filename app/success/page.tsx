@@ -20,7 +20,7 @@ function SuccessContent() {
       setTimeout(() => {
         setPwaUrl(url);
         setIsLoading(false);
-      }, 10000);
+      }, 20000);
     } else {
       setIsLoading(false);
     }
