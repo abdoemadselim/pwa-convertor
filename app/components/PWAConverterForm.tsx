@@ -163,7 +163,7 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
                   />
                 </FormControl>
                 <FormDescription className="text-gray-400 text-base">
-                  Upload a 512x512 PNG file for your PWA icon. This will be used as the app icon on devices.
+                  Upload a 192x192 PNG file for your PWA icon. This will be used as the app icon on devices.
                 </FormDescription>
                 <FormMessage className="text-base" />
               </FormItem>

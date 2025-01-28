@@ -25,7 +25,7 @@ export default function Home() {
             <div className="flex flex-col items-center mb-8">
               <AnimatedLogo />
               <h1 className="mt-4 text-5xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                PWA Forge
+                PWAify
               </h1>
               <p className="mt-2 text-center text-gray-400 text-xl">
                 Transform any website into a Progressive Web App with just a few

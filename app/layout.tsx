@@ -7,7 +7,7 @@ import Footer from "./components/Footer"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "PWA Forge - Modern Website to PWA Converter",
+  title: "PWAify - Modern Website to PWA Converter",
   description: "Transform any website into a Progressive Web App with just a few clicks",
   manifest: "/manifest.json",
   themeColor: "#3b82f6",
