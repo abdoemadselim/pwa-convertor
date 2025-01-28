@@ -10,9 +10,8 @@ import util from "util";
 import sharp from "sharp";
 
 const execAsync = util.promisify(exec);
-const githubToken =
-  "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"; // Replace with your GitHub PAT
-const githubUsername = "abdoemadselim"; // Replace with your GitHub username
+const githubToken = process.env.GITHUB_TOKEN || ""; // Replace with your GitHub PAT
+const githubUsername = process.env.GITHUB_USER_NAME || ""; // Replace with your GitHub username
 
 // Sub-function 1: Create PWA files in a temporary directory
 async function createPWAFiles(tempDir: string, validatedData: any, repoName: string) {
