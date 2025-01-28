@@ -12,7 +12,7 @@ import sharp from "sharp";
 const execAsync = util.promisify(exec);
 const githubToken = process.env.GITHUB_TOKEN || ""; // Replace with your GitHub PAT
 const githubUsername = process.env.GITHUB_USER_NAME || ""; // Replace with your GitHub username
-
+console.log(process.env.GITHUB_TOKEN);
 // Sub-function 1: Create PWA files in a temporary directory
 async function createPWAFiles(tempDir: string, validatedData: any, repoName: string) {
   // Create index.html with an embedded iframe
@@ -218,7 +218,7 @@ export async function convertToPWA(formData: FormData) {
 
   const validatedData = formSchema.parse({ url, name, themeColor, icon });
   // Create a temporary directory to store the PWA files
-  const tempDir = path.join(__dirname, "temp-pwa");
+  const tempDir = path.join(process.cwd(), "temp-pwa");
   shell.mkdir("-p", tempDir);
 
   // Step 1: Create PWA files
