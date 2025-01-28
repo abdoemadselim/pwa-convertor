@@ -8,24 +8,33 @@ const githubToken = process.env.GITHUB_TOKEN || "";
 const githubUsername = process.env.GITHUB_USER_NAME || "";
 
 async function createFileContent(content: string) {
-  return Buffer.from(content).toString('base64');
+  return Buffer.from(content).toString("base64");
 }
 
-async function uploadFileToGitHub(repoName: string, path: string, content: string, message: string) {
+async function uploadFileToGitHub(
+  repoName: string,
+  path: string,
+  content: string | Buffer,
+  message: string,
+  isBinary: boolean = false
+) {
   try {
-    const encodedContent = await createFileContent(content);
+    const encodedContent = isBinary
+      ? content.toString("base64")
+      : Buffer.from(content).toString("base64");
+
     await axios.put(
       `https://api.github.com/repos/${githubUsername}/${repoName}/contents/${path}`,
       {
         message,
         content: encodedContent,
-        branch: 'main'
+        branch: "main",
       },
       {
         headers: {
           Authorization: `token ${githubToken}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
+          Accept: "application/vnd.github.v3+json",
+        },
       }
     );
     return true;
@@ -68,14 +77,14 @@ async function enableGitHubPages(repoName: string) {
       {
         source: {
           branch: "main",
-          path: "/"
-        }
+          path: "/",
+        },
       },
       {
         headers: {
           Authorization: `token ${githubToken}`,
           Accept: "application/vnd.github+json",
-        }
+        },
       }
     );
     return { success: true, pagesUrl: response.data.html_url };
@@ -89,7 +98,8 @@ const formSchema = z.object({
   url: z.string().url(),
   name: z.string().min(1),
   themeColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/),
-  icon: z.instanceof(File)
+  icon: z
+    .instanceof(File)
     .refine((file) => file.type === "image/png", {
       message: "Only PNG files are allowed",
     })
@@ -101,11 +111,13 @@ export async function convertToPWA(formData: FormData) {
     url: formData.get("url"),
     name: formData.get("name"),
     themeColor: formData.get("themeColor"),
-    icon: formData.get("icon")
+    icon: formData.get("icon"),
   });
 
-  const repoName = `${validatedData.name.toLowerCase().replace(/\s+/g, "-")}-pwa`;
-  
+  const repoName = `${validatedData.name
+    .toLowerCase()
+    .replace(/\s+/g, "-")}-pwa`;
+
   // Create repository
   const repoResult = await createGitHubRepo(repoName);
   if (!repoResult.success) {
@@ -141,38 +153,48 @@ export async function convertToPWA(formData: FormData) {
     display: "standalone",
     background_color: validatedData.themeColor,
     theme_color: validatedData.themeColor,
-    icons: validatedData.icon ? [{
-      src: validatedData.icon.name,
-      sizes: "192x192",
-      type: "image/png",
-    }] : [],
+    icons: validatedData.icon
+      ? [
+          {
+            src: validatedData.icon.name,
+            sizes: "192x192",
+            type: "image/png",
+          },
+        ]
+      : [],
   };
 
   // Upload files
-  await uploadFileToGitHub(repoName, 'index.html', indexHtml, "Add index.html");
-  await uploadFileToGitHub(repoName, 'manifest.json', JSON.stringify(manifest, null, 2), "Add manifest.json");
+  await uploadFileToGitHub(repoName, "index.html", indexHtml, "Add index.html");
+  await uploadFileToGitHub(
+    repoName,
+    "manifest.json",
+    JSON.stringify(manifest, null, 2),
+    "Add manifest.json"
+  );
 
   // Upload icon if provided
   if (validatedData.icon) {
     const iconBuffer = await validatedData.icon.arrayBuffer();
     const resizedIconBuffer = await sharp(Buffer.from(iconBuffer))
       .resize(192, 192, {
-        fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 0 }
+        fit: "contain",
+        background: { r: 255, g: 255, b: 255, alpha: 0 },
       })
       .png()
       .toBuffer();
-    
+
     await uploadFileToGitHub(
-      repoName, 
+      repoName,
       validatedData.icon.name,
-      resizedIconBuffer.toString('base64'),
-      "Add icon"
+      resizedIconBuffer, // Pass the buffer directly
+      "Add icon",
+      true // Indicate this is a binary file
     );
   }
 
   // Enable GitHub Pages
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
   const pagesResult = await enableGitHubPages(repoName);
 
   if (!pagesResult.success) {
@@ -184,7 +206,7 @@ export async function convertToPWA(formData: FormData) {
     pwaUrl: pagesResult.pagesUrl,
     files: [
       { name: "manifest.json", content: manifest },
-      { name: "index.html", content: indexHtml }
-    ]
+      { name: "index.html", content: indexHtml },
+    ],
   };
 }
