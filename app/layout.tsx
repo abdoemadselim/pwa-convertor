@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import Footer from "./components/Footer"
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { FlickeringGridBackground } from "./components/FlickeringGridBackground"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-gray-100 min-h-screen`}
       >
+        <FlickeringGridBackground />
         <div className="fixed inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
         <div className="relative z-10">{children}</div>
         <Toaster />
