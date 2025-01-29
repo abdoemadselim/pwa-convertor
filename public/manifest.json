@@ -1,6 +1,6 @@
 {
-  "name": "PWA Forge",
-  "short_name": "PWA Forge",
+  "name": "PWAify",
+  "short_name": "PWAify",
   "description": "Transform any website into a Progressive Web App with just a few clicks",
   "start_url": "/",
   "display": "standalone",
@@ -8,12 +8,12 @@
   "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "/icon192x192.png",
+      "src": "./icon192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon512x512.png",
+      "src": "./icon512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
