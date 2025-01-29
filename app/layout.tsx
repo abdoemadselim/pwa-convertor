@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import Footer from "./components/Footer"
+import { GoogleAnalytics } from '@next/third-parties/google'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,6 +26,7 @@ export default function RootLayout({
         <link rel="icon" href="/icon512x512.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icon512x512.png" />
       </head>
+      <GoogleAnalytics gaId="G-8ME0273M9M" />
       <body
         className={`${inter.className} bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 text-gray-100 min-h-screen`}
       >
