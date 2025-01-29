@@ -97,15 +97,21 @@ function SuccessContent() {
               <a
                 href={pwaUrl}
                 target="_blank"
+                aria-label="Visit your Progressive Web App"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 break-all flex items-center justify-center">
-                {pwaUrl} <ExternalLink className="w-4 h-4 ml-2" />
+                {pwaUrl}{" "}
+                <ExternalLink className="w-4 h-4 ml-2" aria-hidden="true" />
               </a>
             </div>
             <div className="flex justify-center space-x-4">
               <Button asChild variant="outline">
-                <Link href="/" className="flex items-center">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Converter
+                <Link
+                  href="/"
+                  className="flex items-center"
+                  aria-label="Return to PWA Converter">
+                  <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" /> Back
+                  to Converter
                 </Link>
               </Button>
               <Button asChild>
@@ -113,8 +119,10 @@ function SuccessContent() {
                   href={pwaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Open your Progressive Web App in a new tab"
                   className="flex items-center">
-                  Visit PWA <ExternalLink className="w-4 h-4 ml-2" />
+                  Visit PWA{" "}
+                  <ExternalLink className="w-4 h-4 ml-2" aria-hidden="true" />
                 </a>
               </Button>
             </div>
