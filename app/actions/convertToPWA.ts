@@ -106,6 +106,26 @@ const formSchema = z.object({
     .optional(),
 });
 
+async function checkRepoExists(repoName: string): Promise<boolean> {
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${githubUsername}/${repoName}`,
+      {
+        headers: {
+          Authorization: `token ${githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      }
+    );
+    return response.status === 200;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export async function convertToPWA(formData: FormData) {
   const validatedData = formSchema.parse({
     url: formData.get("url"),
@@ -116,12 +136,19 @@ export async function convertToPWA(formData: FormData) {
 
   const repoName = `${validatedData.name
     .toLowerCase()
-    .replace(/\s+/g, "-")}-pwa`;
+    .replace(/\s+/g, "-")}`;
+
+    // Check if the repository already exists
+  const repoExists = await checkRepoExists(repoName);
+  console.log(repoExists)
+  if (repoExists) {
+    return { success: false, error: `this PWA Name "${repoName}" is not available. Please choose a different name.` };
+  }
 
   // Create repository
   const repoResult = await createGitHubRepo(repoName);
   if (!repoResult.success) {
-    return { success: false, error: repoResult.error };
+    return { success: false, error: `Something went wrong :(`};
   }
 
   // Create and upload index.html
@@ -198,7 +225,7 @@ export async function convertToPWA(formData: FormData) {
   const pagesResult = await enableGitHubPages(repoName);
 
   if (!pagesResult.success) {
-    return { success: false, error: pagesResult.error };
+    return { success: false, error: "Something went wrong :(" };
   }
 
   return {

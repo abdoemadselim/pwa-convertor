@@ -1,6 +1,4 @@
-"use client"
-
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
@@ -19,10 +17,15 @@ interface PWAConverterFormProps {
 export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps) {
   const { toast } = useToast()
   const router = useRouter()
+  
+  // Error state
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const onSubmit = useCallback(
     async (values: any) => {
       setIsLoading(true)
+      setErrorMessage(null) // Reset previous errors before submission
+
       try {
         const formData = new FormData()
         formData.append("url", values.url)
@@ -33,11 +36,17 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
         }
 
         const result = await convertToPWA(formData)
+        if (!result.success) {
+          throw new Error(result.error)
+        }
         router.push(`/success?pwaUrl=${encodeURIComponent(result.pwaUrl)}`)
-      } catch (error) {
+      } catch (error: any) {
+        console.log(error.message)
+        // Set the error message to be displayed
+        setErrorMessage(error.message)
         toast({
           title: "Error",
-          description: "Failed to convert website to PWA. Please try again.",
+          description: error.message,
           variant: "destructive",
         })
         setIsLoading(false)
@@ -55,6 +64,7 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
         className="space-y-8 max-w-2xl mx-auto"
         aria-label="PWA Conversion Form"
       >
+        {/* URL Input Field */}
         <FormField
           control={form.control}
           name="url"
@@ -82,6 +92,8 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
             </motion.div>
           )}
         />
+        
+        {/* PWA Name Input Field */}
         <FormField
           control={form.control}
           name="name"
@@ -113,6 +125,8 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
             </motion.div>
           )}
         />
+        
+        {/* Theme Color Input Field */}
         <FormField
           control={form.control}
           name="themeColor"
@@ -152,6 +166,8 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
             </motion.div>
           )}
         />
+        
+        {/* PWA Icon Upload Field */}
         <FormField
           control={form.control}
           name="icon"
@@ -181,6 +197,20 @@ export default function PWAConverterForm({ setIsLoading }: PWAConverterFormProps
             </motion.div>
           )}
         />
+
+        {/* Error Message Display */}
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+            className="text-red-600 bg-red-100 border border-red-300 p-4 rounded-md"
+          >
+            <strong>Error: </strong>{errorMessage}
+          </motion.div>
+        )}
+
+        {/* Submit Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
